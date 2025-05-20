@@ -1473,12 +1473,14 @@ MonoBehaviour:
   selectedElementType: 0
   levelElementsParent: {fileID: 814513619}
   levelNameInputField: {fileID: 1754829555}
-  editorMaxCommandStackSize: 5
-  editorAvailableCommands:
-  - commandType: Right
-    initialCount: 5
-  - commandType: Jump
-    initialCount: 2
+  editorMaxOptionStackSize: 10
+  editorAvailableOptions:
+  - optionType: Right
+    initialCount: 8
+  - optionType: Observe
+    initialCount: 8
+  - optionType: Jump
+    initialCount: 8
 --- !u!1 &1754829553
 GameObject:
   m_ObjectHideFlags: 0

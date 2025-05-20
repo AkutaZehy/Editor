@@ -24,19 +24,15 @@ public class LevelEditorManager : MonoBehaviour
     private string tempTestFileName = "New Level";
 
     [Header("Game Settings for Level")]
-    public int editorMaxCommandStackSize = 5;
-    public List<AvailableCommand> editorAvailableCommands = new List<AvailableCommand>();
-
+    public int editorMaxOptionStackSize = 5;
+    public List<AvailableOption> editorAvailableOptions = new List<AvailableOption>();
 
     void Start()
     {
         if (levelElementsParent == null)
         {
             GameObject parentObj = GameObject.Find("_LevelElements");
-            if (parentObj != null)
-            {
-                levelElementsParent = parentObj.transform;
-            }
+            if (parentObj != null) levelElementsParent = parentObj.transform;
             else
             {
                 Debug.LogError("找不到名为 '_LevelElements' 的 GameObject! 请在 Hierarchy 中创建并赋值给 LevelEditorManager.");
@@ -44,26 +40,17 @@ public class LevelEditorManager : MonoBehaviour
             }
         }
 
-        if (levelNameInputField != null && string.IsNullOrEmpty(levelNameInputField.text))
-        {
-            levelNameInputField.text = "New Level";
-        }
+        if (levelNameInputField != null && string.IsNullOrEmpty(levelNameInputField.text)) levelNameInputField.text = "New Level";
     }
 
     void Update()
     {
-        if (Input.GetMouseButtonDown(0) && !EventSystem.current.IsPointerOverGameObject())
-        {
-            PlaceSelectedElement();
-        }
-        else if (Input.GetMouseButtonDown(1) && !EventSystem.current.IsPointerOverGameObject())
-        {
-            DeleteElementAtMouse();
-        }
+        if (Input.GetMouseButtonDown(0) && !EventSystem.current.IsPointerOverGameObject()) PlaceSelectedElement();
+        else if (Input.GetMouseButtonDown(1) && !EventSystem.current.IsPointerOverGameObject()) DeleteElementAtMouse();
 
-        if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.S)) { SaveLevel(); }
-        if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.L)) { LoadLevel(); }
-        if (Input.GetKeyDown(KeyCode.T)) { TestLevel(); }
+        if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.S)) SaveLevel();
+        if (Input.GetKey(KeyCode.LeftControl) && Input.GetKeyDown(KeyCode.L)) LoadLevel();
+        if (Input.GetKeyDown(KeyCode.T)) TestLevel();
     }
 
     // ==================== UI 调用的包装方法 ====================
@@ -77,7 +64,6 @@ public class LevelEditorManager : MonoBehaviour
     public void SetSelectedElementType(ElementType type)
     {
         selectedElementType = type;
-        Debug.Log("当前选择的元素类型: " + selectedElementType);
     }
 
     void PlaceSelectedElement()
@@ -231,8 +217,8 @@ public class LevelEditorManager : MonoBehaviour
             }
         }
 
-        levelData.maxCommandStackSize = editorMaxCommandStackSize;
-        levelData.availableCommands = new List<AvailableCommand>(editorAvailableCommands);
+        levelData.maxOptionStackSize = editorMaxOptionStackSize;
+        levelData.availableOptions = new List<AvailableOption>(editorAvailableOptions);
 
         string jsonString = JsonUtility.ToJson(levelData, true);
 
@@ -319,15 +305,15 @@ public class LevelEditorManager : MonoBehaviour
                 }
             }
 
-            editorMaxCommandStackSize = levelData.maxCommandStackSize;
-            editorAvailableCommands = new List<AvailableCommand>(levelData.availableCommands);
+            editorMaxOptionStackSize = levelData.maxOptionStackSize;
+            editorAvailableOptions = new List<AvailableOption>(levelData.availableOptions);
 
             levelNameInputField.text = levelData.levelName;
 
             Debug.Log("关卡加载成功从: " + fullPath);
             Debug.Log("加载的关卡名称: " + levelData.levelName);
-            Debug.Log("加载的指令栈大小: " + levelData.maxCommandStackSize);
-            Debug.Log("加载的可用指令数量: " + levelData.availableCommands.Count);
+            Debug.Log("加载的指令栈大小: " + levelData.maxOptionStackSize);
+            Debug.Log("加载的可用指令数量: " + levelData.availableOptions.Count);
 
         }
         catch (System.Exception e)
@@ -373,7 +359,6 @@ public class LevelEditorManager : MonoBehaviour
         string fullPathForTempSave = GetLevelFilePath(tempTestFileName);
         if (string.IsNullOrEmpty(fullPathForTempSave)) return;
 
-
         // 1. 先将当前编辑器中的关卡布局和设置数据保存到临时文件
         LevelData levelData = new LevelData();
         levelData.levelName = currentLevelName;
@@ -394,8 +379,8 @@ public class LevelEditorManager : MonoBehaviour
             }
         }
 
-        levelData.maxCommandStackSize = editorMaxCommandStackSize;
-        levelData.availableCommands = new List<AvailableCommand>(editorAvailableCommands);
+        levelData.maxOptionStackSize = editorMaxOptionStackSize;
+        levelData.availableOptions = new List<AvailableOption>(editorAvailableOptions);
 
         string jsonString = JsonUtility.ToJson(levelData, true);
 
