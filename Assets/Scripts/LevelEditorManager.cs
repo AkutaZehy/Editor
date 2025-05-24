@@ -59,6 +59,8 @@ public class LevelEditorManager : MonoBehaviour
     public void SelectPlayerType() { SetSelectedElementType(ElementType.PlayerStart); }
     public void SelectGoalType() { SetSelectedElementType(ElementType.Goal); }
 
+    public void SelectEmptyType() { SetSelectedElementType(ElementType.None); }
+
     // ==================== 内部逻辑方法 ====================
 
     public void SetSelectedElementType(ElementType type)

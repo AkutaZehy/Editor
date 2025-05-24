@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,12 +6,12 @@ public class StackItem : MonoBehaviour
     public Image background;
     public Image optionIcon;
     private GameManager gm;
-    private string option = "What";
+    private string option = "Empty";
 
     public void Init(GameManager manager)
     {
         gm = manager;
-        option = "What";
+        option = "Empty";
         UpdateView();
 
         GetComponent<Button>().onClick.AddListener(() =>
@@ -30,12 +28,17 @@ public class StackItem : MonoBehaviour
 
     public string GetOption()
     {
+        if (option == "Empty")
+        {
+            SetOption("Pass");
+            return "Pass";
+        }
         return option;
     }
 
     public bool IsEmpty()
     {
-        return option == "What";
+        return option == "Empty";
     }
 
     public void SetHighlight(bool on)

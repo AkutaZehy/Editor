@@ -19,6 +19,7 @@ public class GameManager : MonoBehaviour
     public Button playButton;
     public Button replayButton;
     public Button escapeButton;
+    public Button editorButton;
 
     [Header("Option References")]
     public OptionManager optionManager;
@@ -60,7 +61,8 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        if (escapeButton != null) escapeButton.onClick.AddListener(LoadEditorScene);
+        // if (escapeButton != null) escapeButton.onClick.AddListener(LoadEditorScene);
+        if (editorButton != null) editorButton.onClick.AddListener(LoadEditorScene);
         if (playButton != null) playButton.onClick.AddListener(OnPlayClicked);
         if (replayButton != null) replayButton.onClick.AddListener(OnReplayClicked);
 
@@ -381,8 +383,6 @@ public class GameManager : MonoBehaviour
         if (playerController != null)
         {
             playerController.ResetTo(playerInitialPosition, playerInitialRotation);
-
-            playerController.isControlledByPlayerInput = false;
         }
         else
         {

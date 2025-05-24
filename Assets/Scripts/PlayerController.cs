@@ -6,9 +6,6 @@ public class PlayerController : MonoBehaviour
     public float moveSpeed = 5f;
     private Rigidbody2D rb;
 
-    [Header("Input Control")]
-    public bool isControlledByPlayerInput = false;
-
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -19,51 +16,15 @@ public class PlayerController : MonoBehaviour
         // rb.freezeRotation = true; // 冻结旋转
     }
 
-    void Update()
-    {
-        if (!isControlledByPlayerInput) return;
-
-        // **新增:** 处理玩家的直接输入 (左右移动和跳跃)
-        // 这部分是你需要根据你的具体需求实现的直接控制逻辑
-        float moveInput = Input.GetAxis("Horizontal"); // 获取水平输入 (-1 到 1)
-
-        // 左右移动：根据你的 Rigidbody 设置和 moveSpeed 来实现
-        if (Mathf.Abs(moveInput) > 0.1f) // 检测玩家是否按下了方向键
-        {
-            // 示例：简单的 Rigidbody 速度控制
-            // 注意：这可能与你的步进动画逻辑需要协调
-            rb.velocity = new Vector2(moveInput * moveSpeed, rb.velocity.y);
-            // Debug.Log("玩家通过直接输入移动，输入值: " + moveInput);
-        }
-        else
-        {
-            // 如果没有水平输入，停止水平移动 (如果需要的话)
-            // rb.velocity = new Vector2(0, rb.velocity.y);
-        }
-
-
-        // 跳跃：检测跳跃键按下 (例如空格键)
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            float jumpForce = 5f;
-            rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
-            Debug.Log("玩家通过直接输入跳跃");
-        }
-    }
-
     public void StopAllPlayerCoroutines()
     {
         StopAllCoroutines();
         Debug.Log("PlayerController: 已停止所有玩家动作协程.");
     }
 
-    // 外部调用的接口，开始执行单个指令的协程 (用于步进模式)
     public Coroutine ExecuteSingleOption(string option)
     {
-        // 在执行指令时，通常应该禁用玩家的直接输入
-        isControlledByPlayerInput = false; // 禁用直接控制
-
-        StopAllCoroutines(); // 停止任何正在执行的指令协程
+        StopAllCoroutines();
         return StartCoroutine(RunOption(option));
     }
 
@@ -110,6 +71,12 @@ public class PlayerController : MonoBehaviour
             yield return PhysicsFlipRoll(Vector2.right, 0.4f);
             yield return new WaitForSeconds(0.3f);
         }
+        else if (cmd == "Move_Right")
+        {
+            Vector3 startPos = transform.position;
+            rb.MovePosition(startPos + new Vector3(Vector2.right.x, 0, 0));
+            yield return new WaitForSeconds(0.5f);
+        }
         else if (cmd == "Jump")
         {
             Debug.Log("执行步进跳跃指令");
@@ -122,7 +89,7 @@ public class PlayerController : MonoBehaviour
             Debug.Log("执行等待指令");
             yield return new WaitForSeconds(1f);
         }
-        else if (cmd == "What")
+        else if (cmd == "Pass")
         {
             yield return new WaitForSeconds(0.4f);
         }
@@ -156,7 +123,5 @@ public class PlayerController : MonoBehaviour
 
         // 重新启用物理模拟
         rb.simulated = true;
-
-        isControlledByPlayerInput = false;
     }
 }
