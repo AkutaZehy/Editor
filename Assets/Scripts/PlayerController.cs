@@ -69,7 +69,7 @@ public class PlayerController : MonoBehaviour
         if (cmd == "Right")
         {
             yield return PhysicsFlipRoll(Vector2.right, 0.4f);
-            yield return new WaitForSeconds(0.3f);
+            yield return new WaitForSeconds(0.35f);
         }
         else if (cmd == "Move_Right")
         {
