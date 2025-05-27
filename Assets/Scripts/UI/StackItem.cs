@@ -28,11 +28,11 @@ public class StackItem : MonoBehaviour
 
     public string GetOption()
     {
-        if (option == "Empty")
-        {
-            SetOption("Pass");
-            return "Pass";
-        }
+        // if (option == "Empty")
+        // {
+        //     // SetOption("Pass");
+        //     // return "Pass";
+        // }
         return option;
     }
 
