@@ -1,10 +1,12 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.EventSystems;
 
-public class StackItem : MonoBehaviour
+public class StackItem : MonoBehaviour, IPointerClickHandler
 {
     public Image background;
     public Image optionIcon;
+
     private GameManager gm;
     private string option = "Empty";
 
@@ -13,11 +15,6 @@ public class StackItem : MonoBehaviour
         gm = manager;
         option = "Empty";
         UpdateView();
-
-        GetComponent<Button>().onClick.AddListener(() =>
-        {
-            gm.OnStackSelected(this);
-        });
     }
 
     public void SetOption(string cmd)
@@ -28,11 +25,6 @@ public class StackItem : MonoBehaviour
 
     public string GetOption()
     {
-        // if (option == "Empty")
-        // {
-        //     // SetOption("Pass");
-        //     // return "Pass";
-        // }
         return option;
     }
 
@@ -43,11 +35,16 @@ public class StackItem : MonoBehaviour
 
     public void SetHighlight(bool on)
     {
-        background.color = on ? Color.yellow : Color.white;
-        optionIcon.color = on ? Color.yellow : Color.white;
+        if (background != null)
+        {
+            background.color = on ? Color.yellow : Color.white;
+        }
+        if (optionIcon != null)
+        {
+            optionIcon.color = on ? Color.yellow : Color.white;
+        }
     }
 
-    // StackItem.cs - UpdateView 方法最终修改
     private void UpdateView()
     {
         if (gm == null)
@@ -67,6 +64,28 @@ public class StackItem : MonoBehaviour
         else
         {
             Debug.LogWarning("StackItem: optionIcon 引用丢失!");
+        }
+
+        // TODO: 可以根据指令类型改变 StackItem 的背景样式
+        // if (option == "Empty") { /* 设置为空槽位的样式 */ }
+        // else { /* 设置为有指令的样式 */ }
+    }
+
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (gm == null) return;
+
+        if (eventData.button == PointerEventData.InputButton.Left)
+        {
+            gm.OnStackSelected(this);
+        }
+        else if (eventData.button == PointerEventData.InputButton.Right)
+        {
+            bool success = gm.TryReturnOptionToAvailable(this);
+            if (success)
+            {
+                SetHighlight(false);
+            }
         }
     }
 }

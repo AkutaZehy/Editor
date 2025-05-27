@@ -30,16 +30,17 @@ public class GameManager : MonoBehaviour
     public Text winText;
 
     // 初始化数据
-
     private LevelData currentLevelData;
     private bool isGameInitialized = false;
     private int stackCount;
 
     private List<StackItem> stackItems = new();
-    private StackItem selectedStack = null;
-    private Dictionary<string, int> availableOptions = new Dictionary<string, int>();
-    private List<OptionItem> optionItems = new();
+    private StackItem _lastClickedStackItem = null;
+    private string _selectedOptionTypeToAssign = "";
+    private Dictionary<string, int> _availableOptionsCount = new();
+    private List<OptionItem> _optionItemsUI = new();
 
+    private OptionItem _highlightedOptionItem = null;
     private Coroutine _runningOptionSequenceCoroutine;
 
     private PlayerController playerController;
@@ -92,25 +93,128 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public void OnStackSelected(StackItem item)
+    public void OnOptionSelected(string optionType)
     {
-        if (selectedStack != null)
-            selectedStack.SetHighlight(false);
+        if (_lastClickedStackItem != null)
+        {
+            _lastClickedStackItem.SetHighlight(false);
+            _lastClickedStackItem = null;
+        }
 
-        selectedStack = item;
-        selectedStack.SetHighlight(true);
+        OptionItem clickedOptionItem = _optionItemsUI.Find(item => item.GetOptionType() == optionType);
+
+        if (clickedOptionItem != null)
+        {
+            if (_highlightedOptionItem != null && _highlightedOptionItem != clickedOptionItem)
+            {
+                _highlightedOptionItem.SetHighlight(false);
+            }
+
+            _highlightedOptionItem = clickedOptionItem;
+            _highlightedOptionItem.SetHighlight(true);
+
+            _selectedOptionTypeToAssign = optionType;
+        }
+        else
+        {
+            Debug.LogWarning($"GameManager: 未找到点击的 OptionItem 实例或类型 '{optionType}' 无效.");
+            if (_highlightedOptionItem != null) _highlightedOptionItem.SetHighlight(false);
+            _highlightedOptionItem = null;
+            _selectedOptionTypeToAssign = "";
+            if (_lastClickedStackItem != null) _lastClickedStackItem.SetHighlight(false);
+            _lastClickedStackItem = null;
+        }
     }
 
-    public bool AssignOptionToSelected(string option)
+    public void OnStackSelected(StackItem targetStack)
     {
-        if (selectedStack != null && selectedStack.IsEmpty())
+        if (string.IsNullOrEmpty(_selectedOptionTypeToAssign) || _selectedOptionTypeToAssign == "Empty")
         {
-            selectedStack.SetOption(option);
-            selectedStack.SetHighlight(false);
-            selectedStack = null;
+            if (_lastClickedStackItem != null)
+                _lastClickedStackItem.SetHighlight(false);
+
+            _lastClickedStackItem = targetStack;
+            _lastClickedStackItem.SetHighlight(true);
+            return;
+        }
+
+        bool success = TryAssignSelectedOptionToStack(targetStack, _selectedOptionTypeToAssign);
+
+        if (success)
+        {
+            _selectedOptionTypeToAssign = "";
+            // TODO: 取消之前选中的 OptionItem 的高亮（如果实现了高亮）
+        }
+        else
+        {
+            Debug.LogWarning("GameManager: 无法将选中的选项分配到该槽位。请先选择一个空槽位。");
+            if (_lastClickedStackItem != null) _lastClickedStackItem.SetHighlight(false);
+            _lastClickedStackItem = null;
+        }
+    }
+
+    private bool TryAssignSelectedOptionToStack(StackItem targetStack, string optionTypeToAssign)
+    {
+        if (targetStack == null || !targetStack.IsEmpty())
+        {
+            Debug.LogWarning("GameManager: 目标指令槽位无效或不为空。");
+            return false;
+        }
+
+        if (!_availableOptionsCount.ContainsKey(optionTypeToAssign) || _availableOptionsCount[optionTypeToAssign] <= 0)
+        {
+            Debug.LogWarning($"GameManager: 指令 '{optionTypeToAssign}' 数量不足。");
+            return false;
+        }
+
+        targetStack.SetOption(optionTypeToAssign);
+        _availableOptionsCount[optionTypeToAssign]--;
+        int currentCount = _availableOptionsCount[optionTypeToAssign];
+
+        OptionItem assignedOptionItem = _optionItemsUI.Find(item => item.GetOptionType() == optionTypeToAssign);
+        if (assignedOptionItem != null)
+        {
+            assignedOptionItem.SetCount(currentCount);
+        }
+
+        if (_highlightedOptionItem != null)
+        {
+            _highlightedOptionItem.SetHighlight(false);
+            _highlightedOptionItem = null;
+        }
+        _selectedOptionTypeToAssign = "";
+
+        return true;
+    }
+
+    public bool TryReturnOptionToAvailable(StackItem stackItemToReturn)
+    {
+        if (stackItemToReturn == null || stackItemToReturn.IsEmpty())
+        {
+            Debug.LogWarning("GameManager: 尝试归还的指令槽位为空或无效。");
+            return false;
+        }
+
+        string returnedOptionType = stackItemToReturn.GetOption();
+
+        stackItemToReturn.SetOption("Empty");
+
+        if (_availableOptionsCount.ContainsKey(returnedOptionType))
+        {
+            _availableOptionsCount[returnedOptionType]++;
+            int currentCount = _availableOptionsCount[returnedOptionType];
+            OptionItem returnedOptionItem = _optionItemsUI.Find(item => item.GetOptionType() == returnedOptionType);
+            if (returnedOptionItem != null)
+            {
+                returnedOptionItem.SetCount(currentCount);
+            }
             return true;
         }
-        return false;
+        else
+        {
+            Debug.LogError($"GameManager: 尝试归还未知指令类型 '{returnedOptionType}'。");
+            return true;
+        }
     }
 
     void InitOption()
@@ -118,16 +222,16 @@ public class GameManager : MonoBehaviour
         foreach (Transform child in optionContainer)
             Destroy(child.gameObject);
 
-        optionItems.Clear();
+        _optionItemsUI.Clear();
 
-        foreach (var opt in availableOptions)
+        foreach (var optKVP in _availableOptionsCount)
         {
-            string optionType = opt.Key;
-            int initialCount = opt.Value;
+            string optionType = optKVP.Key;
+            int initialCount = optKVP.Value;
 
-            if (string.IsNullOrEmpty(optionType) || initialCount <= 0)
+            if (string.IsNullOrEmpty(optionType))
             {
-                Debug.LogWarning("GameManager: 字典中发现无效数据，跳过: Type=" + optionType + ", Count=" + initialCount);
+                Debug.LogWarning($"GameManager: 字典中发现无效指令类型，跳过: Type='{optionType}'.");
                 continue;
             }
 
@@ -146,7 +250,7 @@ public class GameManager : MonoBehaviour
 
             optionItem.Init(this, optionType, initialCount, iconSprite);
 
-            optionItems.Add(optionItem);
+            _optionItemsUI.Add(optionItem);
         }
     }
 
@@ -160,7 +264,6 @@ public class GameManager : MonoBehaviour
 
     void LoadEditorScene()
     {
-        Debug.Log("返回编辑器场景...");
         SceneManager.LoadScene("EditorScene");
     }
 
@@ -173,7 +276,6 @@ public class GameManager : MonoBehaviour
         }
 
         currentLevelData = levelData;
-        Debug.Log("GameManager 收到 LevelData，开始初始化游戏和构建场景...");
 
         OnReplayClicked();
 
@@ -225,7 +327,6 @@ public class GameManager : MonoBehaviour
         foreach (var elementData in currentLevelData.elements)
         {
             GameObject prefabToInstantiate = null;
-            // 根据元素类型选择对应的运行时预制体
             switch (elementData.type)
             {
                 case ElementType.Platform: prefabToInstantiate = runtimePlatformPrefab; break;
@@ -239,7 +340,6 @@ public class GameManager : MonoBehaviour
                 GameObject newElement = Instantiate(prefabToInstantiate, elementData.position, Quaternion.identity);
                 newElement.transform.SetParent(runtimeLevelParent);
 
-                // 获取 PlayerController 引用并保存初始状态
                 if (elementData.type == ElementType.PlayerStart)
                 {
                     playerController = newElement.GetComponent<PlayerController>();
@@ -249,7 +349,6 @@ public class GameManager : MonoBehaviour
                     }
                     else
                     {
-                        // 保存玩家的初始位置和旋转
                         playerInitialPosition = newElement.transform.position;
                         playerInitialRotation = newElement.transform.rotation;
                     }
@@ -259,8 +358,7 @@ public class GameManager : MonoBehaviour
                     FlagTrigger flag = newElement.GetComponent<FlagTrigger>(); // 获取 FlagTrigger 组件
                     if (flag != null)
                     {
-                        flag.gm = this; // 将当前的 GameManager 实例赋值给 FlagTrigger 的 gm 变量
-                        Debug.Log("构建场景时，已将 GameManager 引用赋值给 Goal 上的 FlagTrigger.");
+                        flag.gm = this;
                     }
                     else
                     {
@@ -273,32 +371,28 @@ public class GameManager : MonoBehaviour
                 Debug.LogError("GameManager: 构建场景时未找到对应 " + elementData.type + " 的运行时预制体! 请检查 GameManager Inspector.");
             }
         }
-        Debug.Log("GameManager: 关卡场景构建完成.");
 
-        // Stack初始化
         stackCount = currentLevelData.maxOptionStackSize;
         InitStack();
 
-        // Option初始化
-        if (availableOptions.Count == 0 || currentLevelData.availableOptions == null)
+        _availableOptionsCount.Clear();
+        if (currentLevelData.availableOptions != null)
         {
             foreach (var opt in currentLevelData.availableOptions)
             {
-                if (string.IsNullOrEmpty(opt.optionType))
+                if (string.IsNullOrEmpty(opt.optionType) || opt.initialCount < 0) // count 可以为0
                 {
                     Debug.LogWarning($"Invalid option data found in LevelData: Type='{opt.optionType}', Count={opt.initialCount}. Skipping.");
                     continue;
                 }
-
-                if (opt.initialCount <= 0)
+                if (!_availableOptionsCount.ContainsKey(opt.optionType))
                 {
-                    Debug.LogWarning($"Invalid option data found in LevelData: Type='{opt.optionType}', Count={opt.initialCount}. Skipping.");
-                    continue;
+                    _availableOptionsCount.Add(opt.optionType, opt.initialCount);
                 }
-
-                if (!availableOptions.ContainsKey(opt.optionType)) availableOptions.Add(opt.optionType, opt.initialCount);
-
-                else Debug.LogWarning($"Duplicate option type '{opt.optionType}' found in LevelData. Skipping duplicate.");
+                else
+                {
+                    Debug.LogWarning($"Duplicate option type '{opt.optionType}' found in LevelData. Overwriting or skipping based on your design. Currently skipping.");
+                }
             }
         }
         InitOption();
@@ -311,13 +405,10 @@ public class GameManager : MonoBehaviour
 
     void OnPlayClicked()
     {
-        Debug.Log("Play Button Clicked");
-
         if (_runningOptionSequenceCoroutine != null)
         {
             StopCoroutine(_runningOptionSequenceCoroutine);
-            _runningOptionSequenceCoroutine = null; // 清空引用
-            Debug.Log("已停止 GameManager 上正在运行的指令序列协程.");
+            _runningOptionSequenceCoroutine = null;
         }
 
         hasWon = false;
@@ -342,25 +433,32 @@ public class GameManager : MonoBehaviour
 
     IEnumerator ExecuteWithHighlight(List<string> options)
     {
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSeconds(0.5f);
 
         for (int i = 0; i < options.Count; i++)
         {
             if (i < stackItems.Count && stackItems[i] != null)
             {
-                stackItems[i].SetHighlight(true); // 高亮
+                stackItems[i].SetHighlight(true);
             }
 
             if (playerController != null)
             {
                 Coroutine playerActionCoroutine = playerController.ExecuteSingleOption(options[i]);
-                yield return playerActionCoroutine;
+                if (playerActionCoroutine != null)
+                {
+                    yield return playerActionCoroutine;
+                }
+                else
+                {
+                    Debug.LogWarning($"PlayerController.ExecuteSingleOption({options[i]}) 未返回有效的协程，可能指令未被处理或PlayerController已禁用。");
+                    yield return new WaitForSeconds(0.5f);
+                }
             }
             else
             {
                 Debug.LogError("GameManager: PlayerController 引用丢失，无法执行指令!");
-
-                yield return null;
+                yield return new WaitForSeconds(0.5f);
             }
 
             if (i < stackItems.Count && stackItems[i] != null)
@@ -369,16 +467,25 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        // 指令序列执行完毕后，检查胜利条件
         CheckWinCondition();
+        _runningOptionSequenceCoroutine = null;
     }
 
     void OnReplayClicked()
     {
+        if (_runningOptionSequenceCoroutine != null)
+        {
+            StopCoroutine(_runningOptionSequenceCoroutine);
+            _runningOptionSequenceCoroutine = null;
+        }
+
+        if (playerController != null)
+        {
+            playerController.StopAllPlayerCoroutines();
+        }
+
         ClearLevel();
         BuildLevel();
-        winText.gameObject.SetActive(false);
-        hasWon = false;
 
         if (playerController != null)
         {
@@ -388,6 +495,30 @@ public class GameManager : MonoBehaviour
         {
             Debug.LogError("GameManager: 玩家控制器引用丢失，无法完成重置!");
         }
+
+        foreach (var stack in stackItems)
+        {
+            stack.SetOption("Empty");
+            stack.SetHighlight(false);
+        }
+
+        foreach (var optionItemUI in _optionItemsUI)
+        {
+            if (_availableOptionsCount.ContainsKey(optionItemUI.GetOptionType()))
+            {
+                optionItemUI.SetCount(_availableOptionsCount[optionItemUI.GetOptionType()]);
+            }
+            else
+            {
+                optionItemUI.SetCount(0);
+            }
+        }
+        if (_lastClickedStackItem != null) _lastClickedStackItem.SetHighlight(false);
+        _lastClickedStackItem = null;
+        _selectedOptionTypeToAssign = "";
+
+        winText.gameObject.SetActive(false);
+        hasWon = false;
     }
 
     public void OnPlayerWin()

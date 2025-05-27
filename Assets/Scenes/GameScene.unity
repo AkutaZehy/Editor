@@ -1149,7 +1149,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   gridSize: 1
   gridLinePrefab: {fileID: 3633155542244240402, guid: c5ff13d0c59c5704ea034ed3079605d9, type: 3}
-  enableGrid: 1
+  enableGrid: 0
 --- !u!1 &2020486700
 GameObject:
   m_ObjectHideFlags: 0
